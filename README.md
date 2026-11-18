@@ -100,4 +100,4 @@ Java 17 · Spring Boot · MyBatis · Thymeleaf · MariaDB · BCrypt · Gemini AP
 
 ## 기록
 
-- [프로젝트 작업 일지 (Notion)](https://fluffy-plane-19c.notion.site/3e3a969c48278070bbaaf5dee74b31b4)
+- [개발 일지 (Notion)](https://elderly-chill-2ac.notion.site/9b7e1a8cb19f83de90b9817b1c102e5e)
