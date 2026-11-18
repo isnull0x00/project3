@@ -63,14 +63,20 @@ flowchart LR
 
 | 주제 | 위치 |
 |---|---|
-| 처리 우선순위 점수와 긴급 규칙 | [`ReportPriorityService.java`](src/main/java/com/commit/project3/service/ReportPriorityService.java#L20) |
-| 유형 순위 쿼리 (주간 반복 신고 1건 집계) | [`report.xml`](src/main/resources/mapper/report.xml#L18) |
-| 신고 문장 다듬기 AI | [`ReportAiService.java`](src/main/java/com/commit/project3/service/ReportAiService.java) |
+| 노선·날 유형별 시간대 비율 계산 | [`hourly.py`](ai_service/app/hourly.py#L53) |
+| 모델 파일 sha256 검증 | [`artifact.py`](ai_service/app/artifact.py#L177) |
+| 예측 가능 기간 경고 기준 | [`predict_api.py`](ai_service/app/predict_api.py#L39) |
+| 시간대별 예측 호출·연동 | [`HourlyRidershipForecastService.java`](src/main/java/com/commit/project3/service/HourlyRidershipForecastService.java) |
 
-```sql
--- 같은 사람이 같은 유형을 같은 주(월~일)에 여러 번 신고하면 1건으로 센다
-COUNT(DISTINCT CONCAT_WS('|', IFNULL(R.MEMBER_NO, CONCAT('n', R.REPORT_NO)), YEARWEEK(R.REG_DATE, 1))) AS cnt
+```python
+if verify:
+    meta = read_summary(directory, scope)
+    if meta.get("sha256") != _sha256(model_path):
+        raise ArtifactError("모델 파일이 요약(해시)과 다릅니다. ...")
+bundle = joblib.load(model_path)
 ```
+
+pickle은 불러오는 것이 곧 코드 실행이라, 해시가 맞는 파일만 불러옵니다.
 
 ## 기술 스택
 
