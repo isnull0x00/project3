@@ -3,14 +3,22 @@
 **신고는 쉽게, 처리는 급한 것부터.** 시민은 클릭 몇 번으로 노선별 불편을 신고하고, 관리자는 점수와 이유가 붙은 목록에서 급한 신고부터 처리합니다.
 그린AI캠퍼스 3차 팀 프로젝트(COMMIT, 3인)입니다.
 
-## 제가 맡은 부분
+<img alt="Java 17" src="https://img.shields.io/badge/Java_17-007396?style=flat-square&logo=openjdk&logoColor=white"> <img alt="Spring Boot" src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=flat-square&logo=springboot&logoColor=white"> <img alt="MyBatis" src="https://img.shields.io/badge/MyBatis-1F1F1F?style=flat-square"> <img alt="MariaDB" src="https://img.shields.io/badge/MariaDB-003545?style=flat-square&logo=mariadb&logoColor=white"> <img alt="Thymeleaf" src="https://img.shields.io/badge/Thymeleaf-005F0F?style=flat-square&logo=thymeleaf&logoColor=white"> <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"> <img alt="Gemini API" src="https://img.shields.io/badge/Gemini_API-8E75B2?style=flat-square&logo=googlegemini&logoColor=white">
 
-저는 예측 서버 이식과 연동을 맡았습니다. [내 커밋 보기](https://github.com/isnull0x00/project3/commits/dev?author=isnull0x00)
+## 예측 서버와 시간대별 예측
 
-- 예측 서버(FastAPI)를 `ai_service`로 이식했습니다(모델 학습 코드는 제외).
-- 노선·날짜별 일별 이용자 수 예측 API와 시간대별 예상 승차 인원 API를 만들었습니다. 시간대 비율표는 84일 자료로 만들고, 마지막 1주를 빼 둔 시험에서 평일 합산 오차 16.2%를 확인했습니다.
-- 예측 가능 기간이 28일 이하로 남으면 `/health`가 경고하게 했습니다.
-- 관리자 지도에 일별 예측과 시간대별 막대 영역을 추가했고, 예측 서버가 꺼져도 화면은 멈추지 않고 안내만 보이게 했습니다.
+이 저장소에서 저는 **노선별 이용자 수 예측 서버(FastAPI)와 관리자 지도 연동**을 구현했습니다.
+[내 커밋 보기](https://github.com/isnull0x00/project3/commits/dev?author=isnull0x00)
+
+| 구현 | 결과 (조건) |
+|---|---|
+| 일별 이용자 수 예측 `/predict` | 오차 10.9% (후보 9개 비교, 마지막 56일 최종 확인) |
+| 시간대별 예상 승차 인원 `/predict/hourly` | 비율 오차 13.9%, 일별 오차까지 합친 평일 16.2% (7~10월 자료) |
+| 예측 서버 장애 대비 | 서버가 꺼져도 화면은 멈추지 않고 안내를 표시 |
+| 모델 파일 검증 | 저장소에 올린 파일의 sha256과 다르면 불러오지 않음 |
+
+- 예측 방법은 기계학습 6개와 단순 규칙 3개를 같은 조건에서 비교해 골랐습니다. 결과는 [`docs/forecast-analysis.md`](docs/forecast-analysis.md)에 있습니다.
+- 예측 가능 기간이 28일 이하로 남으면 `/health`가 경고합니다.
 
 ### 예측 서버 API
 
@@ -36,18 +44,22 @@
 
 </details>
 
+## 화면
+
 | 신고 접수 (유형 · 노선 · 예시 문장 · AI 다듬기) | 관리자 (AI 요약 · 긴급 순 정렬) |
 |---|---|
 | ![신고 접수](docs/demo-report.gif) | ![관리자](docs/demo-admin.gif) |
 
-## 한눈에 보기 (팀 결과)
+## 주요 기능
 
 | | |
 |---|---|
-| 신고 유형 순위 | 상위 4개 유형이 전체의 **72.2%** (경상일보 2025.10.20 · 울산시 2025년 1~9월 자료, 기사 건수로 계산) |
+| 신고 접수 | 유형·노선을 고르고 예시 문장을 눌러 쓰며, AI가 문장을 다듬어 줍니다 |
 | 반복 신고 | 같은 사람이 같은 유형을 같은 주에 여러 번 신고해도 **1건**으로 집계 |
 | 처리 우선순위 | 점수 = 0.4×심각도 + 0.3×이용자 규모 + 0.2×방치 + 0.1×반복 |
 | 긴급 규칙 | 사고 위험 유형이거나 **14일 이상 방치**된 신고는 점수와 무관하게 맨 위 |
+| 관리자 화면 | AI 요약과 급한 순 정렬, 지도에 노선별 예측 이용자 수 표시 |
+| 신고 유형 순위 | 상위 4개 유형이 전체의 **72.2%** (경상일보 2025.10.20 · 울산시 2025년 1~9월 자료, 기사 건수로 계산) |
 
 ## 구조
 
@@ -61,26 +73,22 @@ flowchart LR
 
 ## 핵심 코드
 
-| 주제 | 위치 |
+| 하는 일 | 위치 |
 |---|---|
+| 예측 서버 호출, 시간 제한(연결 0.5초 · 읽기 3초), 실패 시 안내로 전환 | [`RidershipForecastService.java`](src/main/java/com/commit/project3/service/RidershipForecastService.java#L50) |
 | 노선·날 유형별 시간대 비율 계산 | [`hourly.py`](ai_service/app/hourly.py#L53) |
 | 모델 파일 sha256 검증 | [`artifact.py`](ai_service/app/artifact.py#L177) |
+| 시간대별 예측 연동 | [`HourlyRidershipForecastService.java`](src/main/java/com/commit/project3/service/HourlyRidershipForecastService.java) |
 | 예측 가능 기간 경고 기준 | [`predict_api.py`](ai_service/app/predict_api.py#L39) |
-| 시간대별 예측 호출·연동 | [`HourlyRidershipForecastService.java`](src/main/java/com/commit/project3/service/HourlyRidershipForecastService.java) |
 
-```python
-if verify:
-    meta = read_summary(directory, scope)
-    if meta.get("sha256") != _sha256(model_path):
-        raise ArtifactError("모델 파일이 요약(해시)과 다릅니다. ...")
-bundle = joblib.load(model_path)
+```java
+// 예측 서버가 멈춰도 화면이 오래 기다리지 않게 시간 제한을 둠
+SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+factory.setConnectTimeout(Duration.ofMillis(500));
+factory.setReadTimeout(Duration.ofSeconds(3));
 ```
 
-pickle은 불러오는 것이 곧 코드 실행이라, 해시가 맞는 파일만 불러옵니다.
-
-## 기술 스택
-
-Java 17 · Spring Boot · MyBatis · Thymeleaf · MariaDB · BCrypt · Gemini API · FastAPI · Chart.js · Gradle
+예측 서버가 느려지거나 꺼져도 신고 화면은 대기하지 않고, 관리자 화면에는 안내만 표시합니다.
 
 ## 실행
 
@@ -92,11 +100,13 @@ Java 17 · Spring Boot · MyBatis · Thymeleaf · MariaDB · BCrypt · Gemini AP
 ./gradlew bootRun
 ```
 
-## 한계
+## 측정 조건과 범위
 
-- 우선순위 비중(40·30·20·10)은 **시작값**입니다. 실제 운영 데이터에서 관리자 판단과 비교해 조정해야 합니다.
-- 예측 서버의 학습 데이터는 [`ai_service/README.md`](ai_service/README.md)에 적힌 대로 AI 합성데이터이며, 개별 값의 정밀 예측이 아닌 통계적 경향입니다. 우선순위의 "이용자 규모" 점수에 이 예측값이 쓰입니다.
-- 모바일을 위한 반응형 화면은 아직 없습니다.
+- **예측 정확도**: 오차는 학습 기준일 이후 마지막 56일을 따로 떼어 한 번만 본 최종 확인 값입니다. 시간대 비율은 7~10월 자료로 만들었습니다.
+- **예측 자료**: 이용자 수 자료는 국토교통부가 통계적 경향 분석용으로 제공한 AI 합성데이터라, 개별 값이 아니라 경향을 보는 용도입니다. 이 예측값이 우선순위의 "이용자 규모" 점수에 쓰입니다.
+- **예측 가능 기간**: 학습 마지막 날 + 56일까지입니다. 이후에는 모델을 다시 저장해야 하고, 남은 기간이 28일 이하가 되면 `/health`가 알려 줍니다.
+- **우선순위 비중**: 0.4 · 0.3 · 0.2 · 0.1은 시작값입니다. 운영 데이터가 쌓이면 관리자 판단과 비교해 조정합니다.
+- **화면**: PC 화면 기준이고, 모바일용 반응형은 아직 없습니다.
 
 ## 기록
 
